@@ -10,6 +10,7 @@ import {
   getCanIAffordInsight,
 } from "../controllers/ai.controller.js";
 import { getDashboardStats } from "../controllers/budget.controller.js";
+import { getAiBudgetBrief } from "../controllers/aiInsights.controller.js";
 import {
   contributeToGoal,
   createGoal,
@@ -48,6 +49,7 @@ router.post("/transactions", authMiddleware, createTransaction);
 router.post("/transactions/ai-add", authMiddleware, createSmartTransaction);
 router.post("/transactions/ai-suggest", authMiddleware, getAiSuggestion);
 router.post("/transactions/ai-afford", authMiddleware, getCanIAffordInsight);
+router.get("/transactions/ai-brief", authMiddleware, getAiBudgetBrief);
 router.get("/transactions", authMiddleware, listTransactions);
 router.get("/transactions/stats", authMiddleware, getDashboardStats);
 router.get("/transactions/calendar", authMiddleware, getCalendarSummary);

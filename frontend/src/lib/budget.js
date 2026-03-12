@@ -2,7 +2,7 @@ export const typeOptions = ["all", "income", "expense"];
 
 export const categoriesByType = {
   income: ["Salary", "Freelance", "Investments", "Refund", "Gift", "Other"],
-  expense: ["Food", "Transport", "Rent", "Utilities", "Shopping", "Health", "Entertainment", "Education", "Savings", "Other"],
+  expense: ["Food", "Transport", "Rent", "Utilities", "Shopping", "Health", "Entertainment", "Education", "Tuition", "Books", "Hostel", "Mess", "Data/Internet", "Savings", "Other"],
 };
 
 export const formatMonthKey = (date) => {
