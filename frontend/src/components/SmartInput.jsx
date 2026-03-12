@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, Sparkles, Wand2 } from "lucide-react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { Loader2, Sparkles, Wand2, Camera, Upload, X } from "lucide-react";
 import api from "../lib/api";
 
 const categoryMap = {
@@ -249,7 +249,33 @@ const SmartInput = ({ onTransactionAdded }) => {
           <p className="text-xs text-slate-400 mt-1">Track both income and expenses with optional AI assist.</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <input 
+            type="file" 
+            accept="image/*" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            className="hidden" 
+          />
+          <button
+            type="button"
+            onClick={startCamera}
+            disabled={scanning || loading}
+            className="px-3 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs sm:text-sm flex items-center gap-2 disabled:opacity-60 transition-all hover:bg-emerald-500/20"
+          >
+            {scanning ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />} 
+            {scanning ? "Scanning..." : "Scan Receipt"}
+          </button>
+          <button
+            type="button"
+            onClick={handleUploadClick}
+            disabled={scanning || loading}
+            className="px-3 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs sm:text-sm flex items-center gap-2 disabled:opacity-60 transition-all hover:bg-emerald-500/20"
+          >
+            {scanning ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} 
+            {scanning ? "Scanning..." : "Upload"}
+          </button>
+
           <button
             type="button"
             onClick={handleAiSuggest}
@@ -261,10 +287,11 @@ const SmartInput = ({ onTransactionAdded }) => {
           <button
             type="button"
             onClick={() => setUseAi((prev) => !prev)}
-            className={`px-3 py-2 rounded-xl border text-xs sm:text-sm ${useAi
+            className={`px-3 py-2 rounded-xl border text-xs sm:text-sm transition-all ${
+              useAi
                 ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-300"
                 : "border-slate-700 bg-slate-800 text-slate-300"
-              }`}
+            }`}
           >
             AI Save: {useAi ? "ON" : "OFF"}
           </button>
@@ -360,10 +387,59 @@ const SmartInput = ({ onTransactionAdded }) => {
       )}
 
       {errorMessage && (
-        <p className="mt-3 text-sm text-red-300 border border-red-500/30 bg-red-500/10 rounded-xl px-3 py-2">
+        <p className="mt-3 text-sm text-red-300 border border-red-500/30 bg-red-500/10 rounded-xl px-3 py-2 animate-in zoom-in-95">
           {errorMessage}
         </p>
       )}
+
+      {isCameraOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-5 w-full max-w-lg shadow-2xl flex flex-col items-center animate-in zoom-in-95 duration-300">
+            <div className="flex w-full justify-between items-center mb-4">
+              <h3 className="text-white font-semibold flex items-center gap-2">
+                <Camera size={18} className="text-emerald-400" /> Scan Receipt
+              </h3>
+              <button 
+                type="button" 
+                onClick={stopCamera} 
+                className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="relative w-full aspect-[3/4] sm:aspect-video bg-black rounded-xl overflow-hidden mb-5 border border-slate-800 shadow-inner">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 pointer-events-none border-2 border-emerald-500/20 rounded-xl m-8"></div>
+            </div>
+            
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="flex-1 py-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-medium hover:bg-slate-700 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={capturePhoto}
+                className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-emerald-900/40"
+              >
+                <Camera size={20} />
+                Capture Photo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <canvas ref={canvasRef} className="hidden" />
     </section>
   );
 };

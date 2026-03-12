@@ -1,5 +1,8 @@
 import express from "express";
+import multer from "multer";
 const router = express.Router();
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Import Controllers
 import { login, logout, me, refresh, register, updateBudget } from "../controllers/auth.controller.js";
@@ -22,6 +25,7 @@ import {
 
 import { getDashboardStats, getAnalysisSummary } from "../controllers/budget.controller.js";
 import { getAiBudgetBrief } from "../controllers/aiInsights.controller.js";
+import { scanReceipt } from "../controllers/ocr.controller.js";
 import {
   contributeToGoal,
   createGoal,
@@ -107,5 +111,8 @@ router.post("/expenses/seed", authMiddleware, seedDemoData);
 router.put("/expenses/:expenseId", authMiddleware, updateExpense);
 router.delete("/expenses/:expenseId", authMiddleware, deleteExpense);
 router.delete("/expenses", authMiddleware, clearExpenses);
+
+// OCR Routes
+router.post("/ocr/scan", authMiddleware, upload.single("image"), scanReceipt);
 
 export default router;
