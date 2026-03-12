@@ -39,7 +39,7 @@ Transaction:
 Output JSON schema:
 {
   "type": "income" | "expense",
-  "category": "Salary|Freelance|Investments|Refund|Gift|Food|Transport|Rent|Utilities|Shopping|Health|Entertainment|Education|Savings|Other",
+  "category": "Salary|Freelance|Investments|Refund|Gift|Food|Transport|Rent|Utilities|Shopping|Health|Entertainment|Education|Savings|Tuition|Books|Hostel|Mess|Data/Internet|Other",
   "isEssential": boolean,
   "note": "short string",
   "nudge": "short actionable budgeting advice",
@@ -206,7 +206,10 @@ const getAiClassification = async ({ description, amount, transactionDate, defau
 
     return {
       type: parsed.type === "income" ? "income" : "expense",
-      category: typeof parsed.category === "string" ? parsed.category : "Other",
+      category:
+        typeof parsed.category === "string" && parsed.category.trim()
+          ? parsed.category.trim().slice(0, 40)
+          : "Other",
       isEssential: Boolean(parsed.isEssential),
       note: typeof parsed.note === "string" ? parsed.note : "",
       nudge: typeof parsed.nudge === "string" ? parsed.nudge : "",
