@@ -15,6 +15,7 @@ import {
   Sparkles,
   Zap,
   PieChart, //$$$$$$
+  Map,
 } from "lucide-react";
 import api from "../../lib/api";
 import { formatMonthKey, monthTitle } from "../../lib/budget";
@@ -26,6 +27,7 @@ const navItems = [
   { to: "/dashboard/affordability", label: "Affordability AI", icon: Sparkles },
   { to: "/dashboard/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/dashboard/transactions", label: "Transactions", icon: ReceiptText },
+  { to: "/dashboard/smart-spend", label: "Smart Spend", icon: Map },
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

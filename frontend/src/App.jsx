@@ -6,6 +6,7 @@ import BudgetCalendarPage from "./pages/budget/BudgetCalendarPage";
 import BudgetTransactionsPage from "./pages/budget/BudgetTransactionsPage";
 import BudgetAffordabilityPage from "./pages/budget/BudgetAffordabilityPage";
 import AnalysisPage from "./pages/budget/AnalysisPage"; //$$$$$$
+import SmartSpendPage from "./pages/budget/SmartSpendPage";
 import SettingsPage from "./pages/budget/SettingsPage";
 import { useAuth } from "./context/useAuth";
 
@@ -61,7 +62,9 @@ function App() {
           <Route path="affordability" element={<BudgetAffordabilityPage />} />
           <Route path="calendar" element={<BudgetCalendarPage />} />
           <Route path="transactions" element={<BudgetTransactionsPage />} />
+          <Route path="smart-spend" element={<SmartSpendPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="overview" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard/overview" replace />} />
       </Routes>

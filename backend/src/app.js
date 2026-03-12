@@ -4,6 +4,7 @@ import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import apiRoutes from "../routes/api.js";
+import placesRoutes from "../routes/places.js";
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api", apiRoutes);
+app.use("/api/places", placesRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

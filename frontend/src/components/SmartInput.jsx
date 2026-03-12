@@ -3,7 +3,7 @@ import { Loader2, Sparkles, Wand2, Camera, Upload, X } from "lucide-react";
 import api from "../lib/api";
 
 const categoryMap = {
-  expense: ["Food", "Transport", "Rent", "Utilities", "Shopping", "Health", "Entertainment", "Education", "Savings", "Other"],
+  expense: ["Food", "Transport", "Rent", "Utilities", "Shopping", "Health", "Entertainment", "Education", "Bills", "Groceries", "Savings", "Other"],
   income: ["Salary", "Freelance", "Investments", "Refund", "Gift", "Other"],
 };
 
@@ -165,16 +165,47 @@ const SmartInput = ({ onTransactionAdded }) => {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (data.merchant || data.amount) {
-        if (data.merchant) setDescription(data.merchant);
-        if (data.amount) setAmount(String(data.amount));
-        setType("expense");
-      } else if (data.rawText && data.rawText.trim().length > 0) {
-        // Partial detection: text exists but extraction failed
-        const snippet = data.rawText.substring(0, 30).trim() + "...";
+      const analysis = data.aiAnalysis;
+      let filledAny = false;
+
+      if (analysis) {
+        if (analysis.merchant && analysis.merchant.trim() !== "") {
+          setDescription(analysis.merchant);
+          filledAny = true;
+        }
+        if (analysis.amount != null && analysis.amount !== "") {
+          setAmount(String(analysis.amount));
+          filledAny = true;
+        }
+        if (analysis.category) {
+          const matchedType = (analysis.type === "income" || (analysis.category && analysis.category.toLowerCase() === "income")) ? "income" : "expense";
+          setType(matchedType);
+          
+          // Try to match the category string exactly or fallback to Other
+          const lowerCat = analysis.category.toLowerCase();
+          const targetCategory = categoryMap[matchedType].find(c => c.toLowerCase() === lowerCat) || "Other";
+          setCategory(targetCategory);
+
+          // Auto-set essential for things like Bills or Groceries
+          if (matchedType === "expense") {
+            const essentialCats = ["bills", "groceries", "utilities", "rent", "health"];
+            setIsEssential(essentialCats.includes(lowerCat));
+          }
+        }
+        if (analysis.payment_method && type !== "income") {
+          setNote(prev => prev ? `${prev} (via ${analysis.payment_method})` : `Paid via ${analysis.payment_method}`);
+        }
+        if (analysis.date && analysis.date !== "") {
+          setTransactionDate(analysis.date.split('T')[0]);
+        }
+      }
+
+      if (!filledAny && data.rawText && data.rawText.trim().length > 0) {
+        // Fallback to raw text if AI didn't find specific fields
+        const snippet = data.rawText.substring(0, 40).replace(/[\n\r]+/g, " ").trim() + "...";
         setDescription(snippet);
-        alert("Text detected, but could not accurately find merchant/amount. Please fill manually.");
-      } else {
+        alert("Text detected, but could not accurately extract details. Please check manually.");
+      } else if (!filledAny) {
         alert("Could not detect any text in the image. Please try a clearer photo.");
       }
     } catch (error) {
