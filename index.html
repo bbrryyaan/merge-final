@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Smart Budget App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --surface-color: #2c2c2e;
+            --primary-color: #0a84ff;
+            --text-color: #ffffff;
+            --text-muted: #8e8e93;
+            --income-color: #30d158;
+            --expense-color: #ff453a;
+            --separator-color: #3a3a3c;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            overscroll-behavior-y: contain;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            max-width: 450px; /* Mobile-first design */
+            margin: 0 auto;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Page Management */
+        .page {
+            display: none;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px 15px 80px 15px; /* Padding for nav bar */
+            flex-direction: column;
+        }
+        .page.active {
+            display: flex;
+        }
+        
+        /* Upload Page & Settings Page */
+        #upload-page, #settings-page {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            gap: 20px;
+        }
+        .data-action-box {
+            background-color: var(--surface-color);
+            padding: 25px;
+            border-radius: 12px;
+            width: 80%;
+        }
+        .data-action-box h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+
+        .action-label {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: background-color: 0.3s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .action-label:hover { background-color: #0077ee; }
+        .action-label.disabled { background-color: #555; cursor: not-allowed; }
+        #pdf-upload, #json-import { display: none; }
+
+
+        /* Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 5px;
+            margin-bottom: 20px;
+        }
+        .page-header h2 {
+            margin: 0;
+            font-size: 1.4em;
+            text-align: center;
+            flex-grow: 1;
+        }
+        .nav-btn {
+            background: none; border: none; color: var(--primary-color); font-size: 2em;
+            cursor: pointer; padding: 0 10px;
+        }
+        .nav-btn:disabled { color: var(--text-muted); }
+
+        /* Summary Header (Records Page) */
+        .summary-header {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        .summary-item { text-align: center; }
+        .summary-item .label {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .summary-item .value { font-size: 1.2em; font-weight: 600; }
+        .summary-item .value.income { color: var(--income-color); }
+        .summary-item .value.expense { color: var(--expense-color); }
+
+
+        /* Transaction List */
+        .date-group-header {
+            font-size: 0.9em;
+            color: var(--text-muted);
+            margin-top: 20px;
+            margin-bottom: 10px;
+            padding-left: 5px;
+        }
+        .transaction-list {
+            list-style: none; padding: 0; margin: 0;
+            background-color: var(--surface-color);
+            border-radius: 12px;
+        }
+        .transaction-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid var(--separator-color);
+        }
+        .transaction-item:last-child { border-bottom: none; }
+
+        .category-icon {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .category-icon svg { width: 24px; height: 24px; }
+        .transaction-details {
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        .transaction-name { 
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .transaction-bank { font-size: 0.8em; color: var(--text-muted); }
+        .transaction-amount-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .transaction-amount { font-size: 1.1em; font-weight: 600; }
+        .transaction-amount.is-income { color: var(--income-color); }
+        .transaction-amount.is-expense { color: var(--expense-color); }
+        .delete-tx-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 5px;
+        }
+        .delete-tx-btn svg { width: 16px; height: 16px; }
+
+        /* Analysis Page */
+        #chart-container { 
+            position: relative; 
+            width: 100%;
+            max-width: 350px;
+            margin: 20px auto;
+        }
+        #legend-container {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+        .legend-item { display: flex; align-items: center; font-size: 12px; }
+        .legend-color-box { width: 12px; height: 12px; margin-right: 8px; border-radius: 2px; }
+        .placeholder-card { text-align: center; padding: 40px; color: var(--text-muted);}
+
+        /* Categories Page */
+        .section-title {
+            color: var(--text-muted);
+            font-weight: 600;
+            margin: 25px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--separator-color);
+        }
+        #categories-list, #merchant-rules-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .list-item {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .list-item input {
+             background: none;
+             border: none;
+             color: var(--text-color);
+             font-size: 1em;
+             width: 100%;
+        }
+        .delete-btn {
+            background: none; border: none; color: var(--expense-color); cursor: pointer;
+        }
+        #add-category-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        #add-category-input {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--surface-color);
+            border: 1px solid var(--separator-color);
+            color: var(--text-color);
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        .edit-fields {
+            display: flex;
+            gap: 10px;
+            flex-grow: 1;
+        }
+        .edit-fields select {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--separator-color);
+            color: var(--text-color);
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        #save-rules-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1em;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+
+        /* Floating Action Button */
+        #add-tx-btn {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            z-index: 999;
+        }
+        #add-tx-btn svg { width: 28px; height: 28px; }
+
+        /* Modal for adding transaction */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+        }
+        .modal-content h3 { margin-top: 0; }
+        .modal-content .form-group {
+            margin-bottom: 15px;
+        }
+        .modal-content label { display: block; margin-bottom: 5px; color: var(--text-muted); }
+        .modal-content input, .modal-content select {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            background-color: var(--bg-color);
+            border: 1px solid var(--separator-color);
+            color: var(--text-color);
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .modal-actions button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #save-tx-btn { background-color: var(--primary-color); color: white; }
+        #cancel-tx-btn { background-color: var(--separator-color); color: var(--text-color); }
+
+
+        /* Bottom Navigation */
+        nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background-color: var(--surface-color);
+            border-top: 1px solid var(--separator-color);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            max-width: 450px;
+            margin: 0 auto;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 0.7em;
+            border: none; background: none;
+            flex-basis: 0;
+            flex-grow: 1;
+            text-align: center;
+        }
+        .nav-item svg { width: 24px; height: 24px; margin-bottom: 4px; }
+        .nav-item.active { color: var(--primary-color); }
+
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- PAGES -->
+        <div id="upload-page" class="page">
+             <div>
+                <h1>Smart Budget App</h1>
+                <div class="data-action-box">
+                    <h3>Update Monthly Statement</h3>
+                    <input type="file" id="pdf-upload" accept=".pdf">
+                    <label for="pdf-upload" id="upload-label" class="action-label">Upload PDF File</label>
+                    <p style="font-size: 0.8em; color: var(--text-muted); margin-top: 10px;">Upload a new PDF to add or replace a month's transactions.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="records-page" class="page">
+             <div class="page-header">
+                <button id="prev-month" class="nav-btn">&lt;</button>
+                <h2 id="current-month"></h2>
+                <button id="next-month" class="nav-btn">&gt;</button>
+            </div>
+            <div class="summary-header">
+                <div class="summary-item">
+                    <div class="label">Expense</div>
+                    <div class="value expense" id="expense-val"></div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">Income</div>
+                    <div class="value income" id="income-val"></div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">Total</div>
+                    <div class="value" id="net-val"></div>
+                </div>
+            </div>
+            <div id="transaction-container"></div>
+        </div>
+
+        <div id="analysis-page" class="page">
+            <div class="page-header"><h2>Analysis</h2></div>
+            <div id="chart-container">
+                <canvas id="category-canvas" width="250" height="250"></canvas>
+            </div>
+            <div id="legend-container"></div>
+        </div>
+        
+        <div id="categories-page" class="page">
+            <div class="page-header"><h2>Categories & Rules</h2></div>
+            
+            <h3 class="section-title">Manage Categories</h3>
+            <form id="add-category-form">
+                <input type="text" id="add-category-input" placeholder="New category name..." required>
+                <button type="submit" id="add-category-btn" class="nav-btn" style="font-size: 1.5em;">+</button>
+            </form>
+            <ul id="categories-list"></ul>
+            
+            <h3 class="section-title">Merchant Rules</h3>
+            <ul id="merchant-rules-list"></ul>
+            <button id="save-rules-btn">Save & Apply Rules</button>
+        </div>
+
+        <div id="settings-page" class="page active">
+             <div>
+                <h1>Settings</h1>
+                <div class="data-action-box">
+                    <h3>Import Data</h3>
+                    <input type="file" id="json-import" accept=".json">
+                    <label for="json-import" class="action-label">Import Budget File</label>
+                    <p style="font-size: 0.8em; color: var(--text-muted); margin-top: 10px;">Load all your data from a previously exported JSON file.</p>
+                </div>
+                 <div class="data-action-box">
+                    <h3>Export Data</h3>
+                    <button id="json-export" class="action-label">Export Budget File</button>
+                    <p style="font-size: 0.8em; color: var(--text-muted); margin-top: 10px;">Save all transactions, rules, and categories to a JSON file.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADD TRANSACTION BTN -->
+        <button id="add-tx-btn" style="display: none;">
+            <svg fill="white" viewBox="0 0 20 20"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"></path></svg>
+        </button>
+
+        <!-- ADD TRANSACTION MODAL -->
+        <div id="tx-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h3>Add Transaction</h3>
+                <form id="tx-form">
+                    <div class="form-group">
+                        <label for="tx-name">Name</label>
+                        <input type="text" id="tx-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tx-amount">Amount</label>
+                        <input type="number" id="tx-amount" step="0.01" required placeholder="-50.00 for expense">
+                    </div>
+                     <div class="form-group">
+                        <label for="tx-date">Date</label>
+                        <input type="date" id="tx-date" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" id="cancel-tx-btn">Cancel</button>
+                        <button type="submit" id="save-tx-btn">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+
+        <!-- BOTTOM NAVIGATION -->
+        <nav>
+            <button class="nav-item" data-page="records-page">
+                <svg fill="currentColor" viewBox="0 0 20 20"><path d="M1 3a1 1 0 011-1h16a1 1 0 110 2H2a1 1 0 01-1-1zm0 8a1 1 0 011-1h16a1 1 0 110 2H2a1 1 0 01-1-1zm0 8a1 1 0 011-1h16a1 1 0 110 2H2a1 1 0 01-1-1z"></path></svg>
+                Records
+            </button>
+            <button class="nav-item" data-page="analysis-page">
+                 <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v5a1 1 0 102 0V7zM9 13a1 1 0 102 0v1a1 1 0 10-2 0v-1z" clip-rule="evenodd"></path></svg>
+                Analysis
+            </button>
+             <button class="nav-item" data-page="upload-page">
+                <svg fill="currentColor" viewBox="0 0 20 20" class="w-5 h-5"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+                Upload
+            </button>
+             <button class="nav-item" data-page="categories-page">
+                <svg fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>
+                Categories
+            </button>
+            <button class="nav-item" data-page="settings-page">
+                <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg>
+                Settings
+            </button>
+        </nav>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- ELEMENTS ---
+            const uploadInput = document.getElementById('pdf-upload');
+            const uploadLabel = document.getElementById('upload-label');
+            const jsonImportInput = document.getElementById('json-import');
+            const jsonExportBtn = document.getElementById('json-export');
+            const currentMonthEl = document.getElementById('current-month');
+            const prevBtn = document.getElementById('prev-month');
+            const nextBtn = document.getElementById('next-month');
+            const incomeValEl = document.getElementById('income-val');
+            const expenseValEl = document.getElementById('expense-val');
+            const netValEl = document.getElementById('net-val');
+            const transactionContainer = document.getElementById('transaction-container');
+            const canvas = document.getElementById('category-canvas');
+            const legendContainer = document.getElementById('legend-container');
+            const categoriesListEl = document.getElementById('categories-list');
+            const merchantRulesListEl = document.getElementById('merchant-rules-list');
+            const saveRulesBtn = document.getElementById('save-rules-btn');
+            const addCategoryForm = document.getElementById('add-category-form');
+            const addCategoryInput = document.getElementById('add-category-input');
+            const addTxBtn = document.getElementById('add-tx-btn');
+            const txModal = document.getElementById('tx-modal');
+            const txForm = document.getElementById('tx-form');
+            const cancelTxBtn = document.getElementById('cancel-tx-btn');
+            const ctx = canvas ? canvas.getContext('2d') : null;
+            const navItems = document.querySelectorAll('.nav-item');
+
+            // --- STATE ---
+            const STORAGE_KEY = 'smart_budget_app_v1';
+            const DATA_VERSION = 1;
+            let allTransactions = [];
+            let groupedByMonth = {};
+            let sortedMonths = [];
+            let currentMonthIndex = 0;
+            let merchantRules = {};
+            let categories = [ 'Healthcare', 'Shopping', 'Entertainment', 'Food & Dining', 'Subscriptions', 'General', 'Income' ];
+            let profile = { currency: 'INR', monthlyBudget: 0 };
+            let lastPersistAtMs = 0;
+            const categoryColors = ['#ff453a', '#32ade6', '#ffcc00', '#af52de', '#30d158', '#ff9f0a', '#8e8e93', '#5e5ce6'];
+            const categoryIcons = {
+                'Income': { color: '#2c2c2e', svg: `<svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h12v4a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 6a2 2 0 00-2 2v4a2 2 0 002 2h12a2 2 0 002-2v-4a2 2 0 00-2-2H4z" clip-rule="evenodd"></path></svg>` },
+                'Healthcare': { color: '#ff453a', svg: `<svg fill="white" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg>` },
+                'Shopping': { color: '#0a84ff', svg: `<svg fill="white" viewBox="0 0 20 20"><path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path></svg>` },
+                'Entertainment': { color: '#af52de', svg: `<svg fill="white" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm2 1.5a.5.5 0 00-.5.5v3a.5.5 0 00.5.5h1.5a.5.5 0 00.5-.5v-3a.5.5 0 00-.5-.5H4zm4.5.5a.5.5 0 00-.5.5v3a.5.5 0 00.5.5h1.5a.5.5 0 00.5-.5v-3a.5.5 0 00-.5-.5H8.5zm4.5.5a.5.5 0 00-.5.5v3a.5.5 0 00.5.5h1.5a.5.5 0 00.5-.5v-3a.5.5 0 00-.5-.5H13z"></path></svg>` },
+                'Food & Dining': { color: '#ff9f0a', svg: `<svg fill="white" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2a.75.75 0 01.75.75v1.25a.75.75 0 01-1.5 0V2.75A.75.75 0 0110 2zM5.354 3.646a.75.75 0 111.06-1.06l1.25 1.25a.75.75 0 11-1.06 1.06l-1.25-1.25zM14.646 3.646a.75.75 0 10-1.06-1.06l-1.25 1.25a.75.75 0 001.06 1.06l1.25-1.25zM2 10a.75.75 0 01.75-.75h1.25a.75.75 0 010 1.5H2.75A.75.75 0 012 10zm14.5 0a.75.75 0 000-1.5h-1.25a.75.75 0 000 1.5h1.25zM5.354 16.354a.75.75 0 101.06 1.06l1.25-1.25a.75.75 0 10-1.06-1.06l-1.25 1.25zm8.232-1.06a.75.75 0 111.06-1.06l1.25 1.25a.75.75 0 11-1.06 1.06l-1.25-1.25zM10 16a.75.75 0 01.75.75v1.25a.75.75 0 01-1.5 0v-1.25a.75.75 0 01.75-.75zM10 5a5 5 0 110 10 5 5 0 010-10z" clip-rule="evenodd"></path></svg>` },
+                'Subscriptions': { color: '#5e5ce6', svg: `<svg fill="white" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V4zm2 2v1h6V6H7zm6 3H7v1h6V9zm-6 2h6v1H7v-1z"></path></svg>` },
+                'General': { color: '#8e8e93', svg: `<svg fill="white" viewBox="0 0 20 20"><path d="M10 4a2 2 0 100 4 2 2 0 000-4zM10 12a2 2 0 100 4 2 2 0 000-4z"></path></svg>` }
+            };
+
+            // --- UTILITIES (No UI Changes) ---
+            function getUuid() {
+                if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+                return `id_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+            }
+
+            function safeJsonParse(value) {
+                try { return JSON.parse(value); } catch { return null; }
+            }
+
+            function safeLocalStorageGet(key) {
+                try { return localStorage.getItem(key); } catch { return null; }
+            }
+
+            function safeLocalStorageSet(key, value) {
+                try { localStorage.setItem(key, value); return true; } catch { return false; }
+            }
+
+            function serializeTx(tx) {
+                // Dates must be strings for stable export/persist.
+                return {
+                    ...tx,
+                    date: tx?.date instanceof Date ? tx.date.toISOString() : tx?.date
+                };
+            }
+
+            function normalizeImportedTx(tx) {
+                if (!tx || typeof tx !== 'object') return null;
+
+                const rawName = String(tx.name ?? tx.description ?? '').trim();
+                const rawAmount = tx.amount;
+                const parsedAmount = Number(String(rawAmount ?? '').replace(/,/g, ''));
+                const rawDate = tx.date ?? tx.transactionDate ?? tx.createdAt ?? tx.updatedAt ?? null;
+                const parsedDate = rawDate instanceof Date ? rawDate : (rawDate ? new Date(rawDate) : null);
+
+                if (!rawName || !Number.isFinite(parsedAmount) || !parsedDate || Number.isNaN(parsedDate.getTime())) return null;
+
+                let finalAmount = parsedAmount;
+                const type = String(tx.type || '').toLowerCase();
+                if (!String(rawAmount ?? '').includes('-') && (type === 'expense' || type === 'income')) {
+                    finalAmount = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+                }
+
+                const safeId = String(tx.id ?? tx._id ?? '').trim() || getUuid();
+                const safeBank = String(tx.bank ?? tx.entryMode ?? '').trim() || (tx.isManual ? 'Manual Entry' : 'Imported');
+
+                return {
+                    id: safeId,
+                    isManual: Boolean(tx.isManual),
+                    name: rawName,
+                    bank: safeBank,
+                    amount: finalAmount,
+                    date: new Date(Date.UTC(parsedDate.getUTCFullYear(), parsedDate.getUTCMonth(), parsedDate.getUTCDate())),
+                    originalName: String(tx.originalName ?? rawName),
+                };
+            }
+
+            function persistState(force = false) {
+                const now = Date.now();
+                if (!force && now - lastPersistAtMs < 700) return;
+                lastPersistAtMs = now;
+
+                const payload = {
+                    version: DATA_VERSION,
+                    profile,
+                    categories,
+                    merchantRules,
+                    transactions: allTransactions.map(serializeTx),
+                };
+
+                safeLocalStorageSet(STORAGE_KEY, JSON.stringify(payload));
+            }
+
+            function loadPersistedState() {
+                const raw = safeLocalStorageGet(STORAGE_KEY);
+                if (!raw) return false;
+
+                const parsed = safeJsonParse(raw);
+                if (!parsed || typeof parsed !== 'object') return false;
+
+                const importedTxs = Array.isArray(parsed.transactions) ? parsed.transactions.map(normalizeImportedTx).filter(Boolean) : [];
+                const importedRules = parsed.merchantRules && typeof parsed.merchantRules === 'object' ? parsed.merchantRules : {};
+                const importedCats = Array.isArray(parsed.categories) ? parsed.categories.filter(Boolean).map(String) : [];
+                const importedProfile = parsed.profile && typeof parsed.profile === 'object' ? parsed.profile : null;
+
+                allTransactions = importedTxs;
+                merchantRules = importedRules;
+                categories = importedCats.length ? importedCats : categories;
+                if (importedProfile) {
+                    profile = {
+                        currency: String(importedProfile.currency || profile.currency || 'INR').trim().toUpperCase().slice(0, 5) || 'INR',
+                        monthlyBudget: Number(importedProfile.monthlyBudget || 0) || 0,
+                    };
+                }
+
+                return true;
+            }
+            
+            // --- PAGE NAVIGATION ---
+            function showPage(pageId) {
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                const page = document.getElementById(pageId);
+                if (page) page.classList.add('active');
+
+                addTxBtn.style.display = pageId === 'records-page' ? 'flex' : 'none';
+
+                navItems.forEach(item => {
+                    item.classList.toggle('active', item.dataset.page === pageId);
+                });
+                if(pageId === 'analysis-page' && sortedMonths.length > 0) {
+                    const monthKey = sortedMonths[currentMonthIndex];
+                    if (groupedByMonth[monthKey]) drawCategoryChart(groupedByMonth[monthKey]);
+                }
+                if (pageId === 'categories-page') {
+                    populateCategoriesPage();
+                    populateMerchantRulesPage();
+                }
+            }
+            
+            navItems.forEach(item => {
+                if (item) {
+                    item.addEventListener('click', () => {
+                        showPage(item.dataset.page);
+                    });
+                }
+            });
+
+            // --- DATA I/O ---
+            if (jsonImportInput) {
+                jsonImportInput.addEventListener('change', (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            const importedTxs = Array.isArray(data.transactions) ? data.transactions.map(normalizeImportedTx).filter(Boolean) : [];
+                            allTransactions = importedTxs;
+                            merchantRules = (data.merchantRules && typeof data.merchantRules === 'object') ? data.merchantRules : {};
+                            categories = Array.isArray(data.categories) ? data.categories.filter(Boolean).map(String) : categories;
+                            if (data.profile && typeof data.profile === 'object') {
+                                profile = {
+                                    currency: String(data.profile.currency || profile.currency || 'INR').trim().toUpperCase().slice(0, 5) || 'INR',
+                                    monthlyBudget: Number(data.profile.monthlyBudget || 0) || 0,
+                                };
+                            }
+                            processData(allTransactions, false);
+                            persistState(true);
+                            alert("Budget data imported successfully!");
+                        } catch (err) {
+                            alert("Invalid budget data file.");
+                        }
+                    };
+                    reader.readAsText(file);
+                });
+            }
+
+            if (jsonExportBtn) {
+                jsonExportBtn.addEventListener('click', () => {
+                    if (allTransactions.length === 0) {
+                        alert("No data to export.");
+                        return;
+                    }
+                    const dataToExport = {
+                        version: DATA_VERSION,
+                        profile,
+                        transactions: allTransactions.map(serializeTx),
+                        merchantRules,
+                        categories
+                    };
+                    const dataStr = JSON.stringify(dataToExport, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'budget_data.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+            }
+
+            // --- PDF & DATA PROCESSING ---
+            if (uploadInput) {
+                uploadInput.addEventListener('change', async (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    uploadLabel.textContent = 'Processing PDF...';
+                    uploadLabel.classList.add('disabled');
+                    try {
+                        const fileReader = new FileReader();
+                        fileReader.onload = async function() {
+                            try {
+                                const typedarray = new Uint8Array(this.result);
+                                const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+                                let fullText = '';
+                                for (let i = 1; i <= pdf.numPages; i++) {
+                                    const page = await pdf.getPage(i);
+                                    const textContent = await page.getTextContent();
+                                    fullText += textContent.items.map(item => item.str).join(' ');
+                                }
+                                const newTxs = parseTransactions(fullText);
+                                if (newTxs.length > 0) {
+                                    const monthOfNewTxs = newTxs[0].date.toISOString().slice(0, 7);
+                                    const otherMonthsTxs = allTransactions.filter(tx => tx.isManual || tx.date.toISOString().slice(0, 7) !== monthOfNewTxs);
+                                    const allRawTxs = [...otherMonthsTxs, ...newTxs];
+                                    processData(allRawTxs);
+                                } else {
+                                    alert("Could not find any new transactions in this PDF.");
+                                }
+                            } catch (innerErr) {
+                                alert('Error processing PDF file.');
+                                console.error(innerErr);
+                            } finally {
+                                // Allow uploading the same file again if needed.
+                                try { uploadInput.value = ''; } catch {}
+                            }
+                        };
+                        fileReader.readAsArrayBuffer(file);
+                    } catch (err) {
+                        alert('Error reading PDF file.'); console.error(err);
+                    } finally {
+                        uploadLabel.textContent = 'Upload Monthly PDF';
+                        uploadLabel.classList.remove('disabled');
+                    }
+                });
+            }
+
+            function parseTransactions(text) {
+                const data = [];
+                const regex = /(.+?)\s+(Canara[\s\w]*?\d{4})\s+([+-]?[\d,]+\.\d{2})\s+(\d{1,2}\s[A-Za-z]+\s\d{4})\s+(SUCCESS)/g;
+                let match;
+
+                while ((match = regex.exec(text)) !== null) {
+                    let name = match[1].trim();
+                    const junkKeywords = ["SUCCESS", "Name", "Bank", "Amount", "Date", "Status"];
+                    let lastJunkIndex = -1;
+                    junkKeywords.forEach(keyword => {
+                        const index = name.lastIndexOf(keyword);
+                        if (index > lastJunkIndex) {
+                            lastJunkIndex = index + keyword.length;
+                        }
+                    });
+                     if (lastJunkIndex !== -1) {
+                        name = name.substring(lastJunkIndex).trim();
+                    }
+
+                    if(name) {
+                        const parsedDate = parseDateString(match[4].trim());
+                        if(parsedDate) {
+                            data.push({
+                                id: crypto.randomUUID(),
+                                isManual: false,
+                                name: name,
+                                bank: match[2].trim(),
+                                amount: parseFloat(match[3].replace(/,/g, '')),
+                                date: parsedDate,
+                                originalName: name,
+                            });
+                        }
+                    }
+                }
+                return data;
+            }
+            
+            function parseDateString(dateStr) {
+                 const parts = dateStr.split(' ');
+                if (parts.length !== 3) return null;
+                const day = parseInt(parts[0], 10);
+                const monthName = parts[1];
+                const year = parseInt(parts[2], 10);
+                const monthMap = { 'January': 0, 'Jan': 0, 'February': 1, 'Feb': 1, 'March': 2, 'Mar': 2, 'April': 3, 'Apr': 3, 'May': 4, 'June': 5, 'Jun': 5, 'July': 6, 'Jul': 6, 'August': 7, 'Aug': 7, 'September': 8, 'Sep': 8, 'October': 9, 'Oct': 9, 'November': 10, 'Nov': 10, 'December': 11, 'Dec': 11 };
+                const month = monthMap[monthName];
+                if (!isNaN(day) && month !== undefined && !isNaN(year)) { return new Date(Date.UTC(year, month, day)); }
+                return null;
+            }
+
+            function autoCategorize(name, amount) {
+                const lowerName = name.toLowerCase();
+                if (amount > 0) return 'Income';
+                const rule = merchantRules[name];
+                if (rule && rule.newCategory) return rule.newCategory;
+                
+                if (lowerName.includes('hospital') || lowerName.includes('medical')) return 'Healthcare';
+                if (lowerName.includes('general sto') || lowerName.includes('enterprises') || lowerName.includes('sales')) return 'Shopping';
+                if (lowerName.includes('inox') || lowerName.includes('pvr')) return 'Entertainment';
+                if (lowerName.includes('restaurant') || lowerName.includes('sweets') || lowerName.includes('bakers')) return 'Food & Dining';
+                if (lowerName.includes('spotify') || lowerName.includes('google')) return 'Subscriptions';
+                return 'General';
+            }
+
+            function applyMerchantRules(transaction) {
+                const rule = merchantRules[transaction.originalName];
+                let finalName = (rule && rule.newName) ? rule.newName : transaction.name;
+                let finalCategory = autoCategorize(transaction.originalName, transaction.amount);
+                return { ...transaction, name: finalName, category: finalCategory };
+            }
+
+            function processData(transactions, shouldNavigate = true) {
+                 allTransactions = transactions.map(tx => {
+                        const parsedDate = tx.date instanceof Date ? tx.date : parseDateString(tx.date);
+                        if (!parsedDate) return null;
+                        
+                        const amount = parseFloat(String(tx.amount).replace(/,/g, ''));
+                        const baseTx = { ...tx, amount, date: parsedDate };
+                        return applyMerchantRules(baseTx);
+                    }).filter(tx => tx !== null);
+                
+                groupedByMonth = allTransactions.reduce((acc, tx) => {
+                    const monthKey = tx.date.toISOString().slice(0, 7);
+                    if (!acc[monthKey]) acc[monthKey] = [];
+                    acc[monthKey].push(tx); return acc;
+                }, {});
+
+                for (const month in groupedByMonth) {
+                    groupedByMonth[month].sort((a, b) => b.date - a.date);
+                }
+
+                sortedMonths = Object.keys(groupedByMonth).sort().reverse();
+                if (sortedMonths.length > 0 && !groupedByMonth[sortedMonths[currentMonthIndex]]) {
+                    currentMonthIndex = 0;
+                }
+                
+                if (sortedMonths.length > 0) {
+                    renderCurrentMonth();
+                    if (shouldNavigate) showPage('records-page');
+                } else {
+                    if (shouldNavigate) showPage('settings-page');
+                }
+
+                persistState();
+            }
+
+            // --- UI RENDERING & CATEGORIES ---
+            
+            function populateCategoriesPage() {
+                if (!categoriesListEl) return;
+                categoriesListEl.innerHTML = categories.map(cat => `
+                    <li class="list-item">
+                        <input type="text" value="${cat}" data-original-cat="${cat}">
+                        <button class="delete-btn" data-cat="${cat}">
+                            <svg fill="currentColor" viewBox="0 0 20 20" width="20" height="20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </li>
+                `).join('');
+
+                categoriesListEl.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const catToDelete = e.currentTarget.dataset.cat;
+                        categories = categories.filter(c => c !== catToDelete);
+                        populateCategoriesPage();
+                        persistState();
+                    });
+                });
+            }
+
+            function populateMerchantRulesPage() {
+                if (!merchantRulesListEl) return;
+                const uniqueMerchants = [...new Set(allTransactions.map(tx => tx.originalName))];
+                merchantRulesListEl.innerHTML = uniqueMerchants.map(name => {
+                    const rule = merchantRules[name] || {};
+                    const currentName = rule.newName || name;
+                    const currentCategory = rule.newCategory || autoCategorize(name, -1);
+                    
+                    let categoryOptions = categories.map(cat => 
+                        `<option value="${cat}" ${cat === currentCategory ? 'selected' : ''}>${cat}</option>`
+                    ).join('');
+
+                    return `
+                        <li class="list-item" data-original-name="${name}">
+                            <span>${name}</span>
+                            <div class="edit-fields">
+                                <input type="text" value="${currentName}" placeholder="New Name">
+                                <select>${categoryOptions}</select>
+                            </div>
+                        </li>
+                    `;
+                }).join('');
+            }
+            
+            if (addCategoryForm) {
+                addCategoryForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const newCat = addCategoryInput.value.trim();
+                    if (newCat && !categories.includes(newCat)) {
+                        categories.push(newCat);
+                        populateCategoriesPage();
+                        addCategoryInput.value = '';
+                        persistState();
+                    }
+                });
+            }
+            
+            if (saveRulesBtn) saveRulesBtn.addEventListener('click', () => {
+                const newCategories = [];
+                 categoriesListEl.querySelectorAll('.list-item input').forEach(input => {
+                    const originalCat = input.dataset.originalCat;
+                    const newCatName = input.value.trim();
+                    if (newCatName) {
+                        newCategories.push(newCatName);
+                        for(const rule in merchantRules) {
+                            if(merchantRules[rule].newCategory === originalCat) {
+                                merchantRules[rule].newCategory = newCatName;
+                            }
+                        }
+                    }
+                });
+                categories = newCategories;
+
+                document.querySelectorAll('#merchant-rules-list .list-item').forEach(item => {
+                    const originalName = item.dataset.originalName;
+                    const newName = item.querySelector('input').value.trim();
+                    const newCategory = item.querySelector('select').value;
+                    if (newName && originalName) {
+                        merchantRules[originalName] = { newName, newCategory };
+                    }
+                });
+                processData(allTransactions);
+                persistState(true);
+                alert("Rules saved and applied!");
+            });
+            
+            // --- MANUAL TRANSACTION MODAL ---
+            if(addTxBtn) addTxBtn.addEventListener('click', () => txModal.classList.add('active'));
+            if(cancelTxBtn) cancelTxBtn.addEventListener('click', () => txModal.classList.remove('active'));
+            if(txForm) txForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('tx-name').value;
+                const amount = parseFloat(document.getElementById('tx-amount').value);
+                const date = document.getElementById('tx-date').value;
+                
+                if (name && !isNaN(amount) && date) {
+                    const newTx = {
+                        id: getUuid(),
+                        isManual: true,
+                        name,
+                        amount,
+                        date: new Date(date + 'T00:00:00Z'), // Treat as UTC
+                        status: 'SUCCESS',
+                        bank: 'Manual Entry',
+                        originalName: name
+                    };
+                    allTransactions.push(newTx);
+                    processData(allTransactions);
+                    txModal.classList.remove('active');
+                    txForm.reset();
+                }
+            });
+
+            function drawCategoryChart(transactions) {
+                if (!ctx) return;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                legendContainer.innerHTML = '';
+                const expenseData = transactions.filter(tx => tx.amount < 0).reduce((acc, tx) => {
+                        if (!acc[tx.category]) acc[tx.category] = 0;
+                        acc[tx.category] += Math.abs(tx.amount); return acc;
+                    }, {});
+                const categories = Object.keys(expenseData);
+                const totalExpenses = Object.values(expenseData).reduce((sum, val) => sum + val, 0);
+
+                if (categories.length === 0 || totalExpenses === 0) {
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+                    ctx.textAlign = 'center'; ctx.font = '14px sans-serif';
+                    ctx.fillText('No expense data', canvas.width / 2, canvas.height / 2); return;
+                }
+
+                const centerX = canvas.width / 2, centerY = canvas.height / 2;
+                const radius = Math.min(centerX, centerY) * 0.8;
+                let startAngle = -0.5 * Math.PI;
+
+                categories.forEach((category, index) => {
+                    const color = categoryColors[index % categoryColors.length];
+                    const sliceAngle = (expenseData[category] / totalExpenses) * 2 * Math.PI;
+                    const endAngle = startAngle + sliceAngle;
+                    ctx.fillStyle = color;
+                    ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.arc(centerX, centerY, radius, startAngle, endAngle); ctx.closePath(); ctx.fill();
+                    const percentage = ((expenseData[category] / totalExpenses) * 100).toFixed(1);
+                    legendContainer.innerHTML += `<div class="legend-item"><div class="legend-color-box" style="background-color: ${color};"></div><span>${category} (${percentage}%)</span></div>`;
+                    startAngle = endAngle;
+                });
+
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface-color').trim();
+                ctx.beginPath(); ctx.arc(centerX, centerY, radius * 0.5, 0, 2 * Math.PI); ctx.fill();
+            }
+
+            function renderCurrentMonth() {
+                if (sortedMonths.length === 0 || !currentMonthEl || !prevBtn || !nextBtn || !incomeValEl || !expenseValEl || !netValEl || !transactionContainer) return;
+                const monthKey = sortedMonths[currentMonthIndex];
+                const monthTransactions = groupedByMonth[monthKey] || [];
+                const displayDate = new Date(monthKey + '-02T00:00:00Z').toLocaleString('default', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+                currentMonthEl.textContent = displayDate;
+
+                prevBtn.disabled = currentMonthIndex >= sortedMonths.length - 1;
+                nextBtn.disabled = currentMonthIndex === 0;
+
+                let income = 0, expenses = 0;
+                monthTransactions.forEach(tx => { if (tx.amount > 0) income += tx.amount; else expenses += tx.amount; });
+                
+                const formatCurrency = (val) => val.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 });
+                incomeValEl.textContent = formatCurrency(income);
+                expenseValEl.textContent = formatCurrency(Math.abs(expenses));
+                netValEl.textContent = formatCurrency(income + expenses);
+
+                const groupedByDate = monthTransactions.reduce((acc, tx) => {
+                    const dateKey = tx.date.toISOString().slice(0, 10);
+                    if (!acc[dateKey]) acc[dateKey] = [];
+                    acc[dateKey].push(tx);
+                    return acc;
+                }, {});
+
+                let html = '';
+                const sortedDates = Object.keys(groupedByDate).sort().reverse();
+
+                for(const dateKey of sortedDates) {
+                    const date = new Date(dateKey + 'T00:00:00Z');
+                    const dateString = date.toLocaleDateString('en-GB', {weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC'});
+                    html += `<div class="date-group-header">${dateString}</div>`;
+                    html += '<ul class="transaction-list">';
+                    groupedByDate[dateKey].forEach(tx => {
+                        const iconInfo = categoryIcons[tx.category] || categoryIcons['General'];
+                        const deleteButton = tx.isManual ? `<button class="delete-tx-btn" data-id="${tx.id}"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"></path></svg></button>` : '';
+                        html += `
+                            <li class="transaction-item">
+                                <div class="category-icon" style="background-color: ${iconInfo.color || '#8e8e93'};">
+                                    ${iconInfo ? iconInfo.svg : categoryIcons['General'].svg}
+                                </div>
+                                <div class="transaction-details">
+                                    <span class="transaction-name">${tx.name}</span>
+                                    <span class="transaction-bank">${tx.bank}</span>
+                                </div>
+                                <div class="transaction-amount-wrapper">
+                                    <span class="transaction-amount ${tx.amount > 0 ? 'is-income' : 'is-expense'}">
+                                        ${formatCurrency(tx.amount)}
+                                    </span>
+                                    ${deleteButton}
+                                </div>
+                            </li>`;
+                    });
+                    html += '</ul>';
+                }
+                transactionContainer.innerHTML = html;
+
+                transactionContainer.querySelectorAll('.delete-tx-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const txId = e.currentTarget.dataset.id;
+                        allTransactions = allTransactions.filter(tx => tx.id !== txId);
+                        processData(allTransactions);
+                    });
+                });
+            }
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => { if (currentMonthIndex < sortedMonths.length - 1) { currentMonthIndex++; renderCurrentMonth(); } });
+            }
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => { if (currentMonthIndex > 0) { currentMonthIndex--; renderCurrentMonth(); } });
+            }
+            
+            // Restore persisted data if available, without changing the initial page (Settings stays default).
+            if (loadPersistedState() && allTransactions.length > 0) {
+                processData(allTransactions, false);
+            }
+
+            showPage('settings-page');
+        });
+    </script>
+</body>
+</html>
