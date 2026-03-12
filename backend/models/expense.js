@@ -23,6 +23,11 @@ const expenseSchema = new mongoose.Schema({
         score: { type: Number, min: 1, max: 10 },
         description: { type: String, default: "SDG 12: Responsible Consumption" }
     },
+    paymentMode: {
+        type: String,
+        enum: ["cash", "upi", "savings"],
+        default: "upi"
+    },
     nudge: { type: String }, // The AI's advice string
     date: { type: Date, default: Date.now }
 }, { timestamps: true });

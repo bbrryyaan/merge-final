@@ -41,8 +41,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateNetBalance = async (netBalance, cashBalance) => {
-    await api.patch('/api/auth/net-balance', { netBalance, cashBalance });
+  const updateNetBalance = async (netBalance, cashBalance, savingsBalance) => {
+    await api.patch('/api/auth/net-balance', { netBalance, cashBalance, savingsBalance });
     await refreshSession();
   }
 

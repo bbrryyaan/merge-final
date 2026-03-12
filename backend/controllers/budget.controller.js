@@ -38,9 +38,10 @@ export const getDashboardStats = async (req, res) => {
     res.status(200).json({
       totalIncome: Number(totalIncome.toFixed(2)),
       totalExpenses: Number(totalExpenses.toFixed(2)),
-      netBalance: Number(((user.netBalance || 0) + (user.cashBalance || 0)).toFixed(2)),
+      netBalance: Number(((user.netBalance || 0) + (user.cashBalance || 0) + (user.savingsBalance || 0)).toFixed(2)),
       userNetBalance: Number((user.netBalance || 0).toFixed(2)),
       userCashBalance: Number((user.cashBalance || 0).toFixed(2)),
+      userSavingsBalance: Number((user.savingsBalance || 0).toFixed(2)),
       essentialSpend: Number(essentialSpend.toFixed(2)),
       savingsRate: Number(savingsRate.toFixed(2)),
       transactionCount: transactions.length,

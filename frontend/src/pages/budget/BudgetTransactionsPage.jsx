@@ -50,6 +50,7 @@ const BudgetTransactionsPage = () => {
     amount: "",
     type: "expense",
     category: "Other",
+    paymentMode: "upi",
     transactionDate: "",
     note: "",
   });
@@ -155,6 +156,7 @@ const BudgetTransactionsPage = () => {
       amount: String(txn.amount),
       type: txn.type || "expense",
       category: txn.category || "Other",
+      paymentMode: txn.paymentMode || "upi",
       transactionDate: toInputDate(txn.transactionDate || txn.createdAt),
       note: txn.note || "",
     });
@@ -292,6 +294,15 @@ const BudgetTransactionsPage = () => {
                                 <option key={cat} value={cat}>{cat}</option>
                               ))}
                             </select>
+                            <select
+                              value={editForm.paymentMode}
+                              onChange={(e) => setEditForm((p) => ({ ...p, paymentMode: e.target.value }))}
+                              className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                            >
+                              <option value="upi">UPI</option>
+                              <option value="cash">Cash</option>
+                              <option value="savings">Savings</option>
+                            </select>
                             <input
                               type="date"
                               value={editForm.transactionDate}
@@ -325,6 +336,14 @@ const BudgetTransactionsPage = () => {
                                       <span className="truncate max-w-[120px]">{txn.note}</span>
                                     </>
                                   )}
+                                  <span className="w-1 h-1 rounded-full bg-slate-700"></span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                    txn.paymentMode === 'cash' ? 'bg-amber-500/10 text-amber-400' : 
+                                    txn.paymentMode === 'savings' ? 'bg-indigo-500/10 text-indigo-400' : 
+                                    'bg-cyan-500/10 text-cyan-400'
+                                  }`}>
+                                    {txn.paymentMode || 'UPI'}
+                                  </span>
                                   <span className="w-1 h-1 rounded-full bg-slate-700"></span>
                                   <span>{txn.isSample ? "Sample" : "Valid"}</span>
                                 </div>

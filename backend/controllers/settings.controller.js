@@ -9,6 +9,9 @@ const sanitizeUser = (user) => ({
   name: user.name,
   email: user.email,
   monthlyBudget: user.monthlyBudget,
+  netBalance: user.netBalance,
+  cashBalance: user.cashBalance,
+  savingsBalance: user.savingsBalance,
   currency: user.currency,
 });
 
@@ -48,8 +51,11 @@ export const convertCurrency = async (req, res) => {
             // 2. Convert all goals
             await Goal.updateMany({ userId }, { $mul: { targetAmount: rate, savedAmount: rate } }, { session });
 
-            // 3. Convert monthly budget and update currency
+            // 3. Convert monthly budget, balances and update currency
             user.monthlyBudget *= rate;
+            if (user.netBalance !== null) user.netBalance *= rate;
+            if (user.cashBalance !== null) user.cashBalance *= rate;
+            if (user.savingsBalance !== null) user.savingsBalance *= rate;
             user.currency = newCurrency;
             await user.save({ session });
 

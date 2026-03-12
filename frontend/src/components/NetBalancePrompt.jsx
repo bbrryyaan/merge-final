@@ -4,13 +4,15 @@ import { useAuth } from '../context/useAuth';
 const NetBalancePrompt = () => {
   const [upiBalance, setUpiBalance] = useState('');
   const [cashBalance, setCashBalance] = useState('');
+  const [savingsBalance, setSavingsBalance] = useState('');
   const { updateNetBalance } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await updateNetBalance(Number(upiBalance), Number(cashBalance));
+    await updateNetBalance(Number(upiBalance), Number(cashBalance), Number(savingsBalance));
     setUpiBalance('');
     setCashBalance('');
+    setSavingsBalance('');
   };
 
   return (
@@ -39,6 +41,18 @@ const NetBalancePrompt = () => {
               onChange={(e) => setCashBalance(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 px-4 text-slate-100 outline-none focus:border-cyan-500 transition-colors"
               placeholder="Enter cash balance"
+              required
+              min="0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-300 mb-1.5">Savings Account Balance</label>
+            <input
+              type="number"
+              value={savingsBalance}
+              onChange={(e) => setSavingsBalance(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 px-4 text-slate-100 outline-none focus:border-cyan-500 transition-colors"
+              placeholder="Enter savings balance"
               required
               min="0"
             />

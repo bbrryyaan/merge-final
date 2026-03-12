@@ -20,6 +20,7 @@ const sanitizeUser = (user) => ({
   monthlyBudget: user.monthlyBudget,
   netBalance: user.netBalance,
   cashBalance: user.cashBalance,
+  savingsBalance: user.savingsBalance,
   currency: user.currency,
 });
 
@@ -64,11 +65,27 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Currency is invalid" });
     }
 
-    let parsedNetBalance = 0;
-    if (netBalance !== undefined) {
+    let parsedNetBalance = null;
+    if (netBalance !== undefined && netBalance !== null) {
       parsedNetBalance = Number(netBalance);
       if (!Number.isFinite(parsedNetBalance) || parsedNetBalance < 0) {
          return res.status(400).json({ message: "Net balance cannot be negative" });
+      }
+    }
+
+    let parsedCashBalance = null;
+    if (req.body.cashBalance !== undefined && req.body.cashBalance !== null) {
+      parsedCashBalance = Number(req.body.cashBalance);
+      if (!Number.isFinite(parsedCashBalance) || parsedCashBalance < 0) {
+         return res.status(400).json({ message: "Cash balance cannot be negative" });
+      }
+    }
+
+    let parsedSavings = null;
+    if (req.body.savingsBalance !== undefined && req.body.savingsBalance !== null) {
+      parsedSavings = Number(req.body.savingsBalance);
+      if (!Number.isFinite(parsedSavings) || parsedSavings < 0) {
+         return res.status(400).json({ message: "Savings balance cannot be negative" });
       }
     }
 
@@ -78,6 +95,8 @@ export const register = async (req, res) => {
       password: hashedPassword,
       monthlyBudget: parsedBudget,
       netBalance: parsedNetBalance,
+      cashBalance: parsedCashBalance,
+      savingsBalance: parsedSavings,
       currency: normalizedCurrency,
     });
 
@@ -89,17 +108,21 @@ export const register = async (req, res) => {
 
 export const updateNetBalance = async (req, res) => {
   try {
-    const { netBalance } = req.body;
+    const { netBalance, cashBalance, savingsBalance } = req.body;
 
-    const parsed = Number(netBalance);
+    const parsedNet = Number(netBalance);
+    const parsedCash = Number(cashBalance);
+    const parsedSavings = Number(savingsBalance);
 
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      return res.status(400).json({ message: "Net balance must be a valid number" });
+    if (!Number.isFinite(parsedNet) || parsedNet < 0 || 
+        !Number.isFinite(parsedCash) || parsedCash < 0 ||
+        !Number.isFinite(parsedSavings) || parsedSavings < 0) {
+      return res.status(400).json({ message: "Balances must be valid non-negative numbers" });
     }
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      { netBalance: parsed },
+      { netBalance: parsedNet, cashBalance: parsedCash, savingsBalance: parsedSavings },
       { new: true }
     );
 
@@ -108,11 +131,11 @@ export const updateNetBalance = async (req, res) => {
     }
 
     res.status(200).json({
-      message: "Net balance updated",
+      message: "Balances updated",
       user: sanitizeUser(user),
     });
   } catch (error) {
-    res.status(500).json({ message: "Failed to update net balance" });
+    res.status(500).json({ message: "Failed to update balances" });
   }
 };
 
@@ -150,8 +173,9 @@ export const me = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if ((user.netBalance === undefined || user.netBalance === null || user.netBalance === 0) &&
-        (user.cashBalance === undefined || user.cashBalance === null || user.cashBalance === 0)) {
+    if ((user.netBalance === undefined || user.netBalance === null) &&
+        (user.cashBalance === undefined || user.cashBalance === null) &&
+        (user.savingsBalance === undefined || user.savingsBalance === null)) {
       return res.status(206).json({ message: "Balances not set", user: sanitizeUser(user) });
     }
 

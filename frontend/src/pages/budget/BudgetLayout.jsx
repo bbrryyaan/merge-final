@@ -23,6 +23,7 @@ import {
   Loader2,
   Users,
   HandCoins,
+  ShieldAlert,
 } from "lucide-react";
 import api from "../../lib/api";
 import { formatMonthKey, monthTitle } from "../../lib/budget";
@@ -39,6 +40,7 @@ const navItems = [
   { to: "/dashboard/courses", label: "Money Courses", icon: BookOpen },
   { to: "/dashboard/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/dashboard/transactions", label: "Transactions", icon: ReceiptText },
+  { to: "/dashboard/system-logic", label: "System Logic", icon: ShieldAlert },
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

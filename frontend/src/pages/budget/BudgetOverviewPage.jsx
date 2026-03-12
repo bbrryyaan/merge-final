@@ -1,5 +1,5 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { BadgeCheck, PiggyBank, Sparkles, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { BadgeCheck, PiggyBank, Sparkles, TrendingDown, TrendingUp, Wallet, HandCoins, Building2, Landmark } from "lucide-react";
 import { monthTitle } from "../../lib/budget";
 import { useBudgetOutlet } from "./useBudgetOutlet";
 import MarketRates from "../../components/MarketRates";
@@ -78,6 +78,25 @@ const BudgetOverviewPage = () => {
             <p className={`text-2xl font-black mt-1 ${card.highlight ? 'text-fuchsia-100' : 'text-white'}`}>{card.value}</p>
             {card.highlight && <p className="text-[10px] text-fuchsia-400 font-bold mt-1 uppercase tracking-tight">Based on {daysRemaining} days left</p>}
           </article>
+        ))}
+      </section>
+
+      {/* Account System Breakdown */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          { label: "UPI & Bank", value: stats.userNetBalance, icon: Building2, color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/20" },
+          { label: "Cash in Hand", value: stats.userCashBalance, icon: HandCoins, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+          { label: "Savings Vault", value: stats.userSavingsBalance, icon: Landmark, color: "text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
+        ].map((item) => (
+          <div key={item.label} className={`rounded-2xl border ${item.border} ${item.bg} p-4 flex items-center gap-4`}>
+             <div className={`w-10 h-10 rounded-xl ${item.bg} border ${item.border} flex items-center justify-center ${item.color}`}>
+                <item.icon size={20} />
+             </div>
+             <div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">{item.label}</p>
+                <p className="text-xl font-black text-white">{money(item.value)}</p>
+             </div>
+          </div>
         ))}
       </section>
 

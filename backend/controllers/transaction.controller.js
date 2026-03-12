@@ -1,4 +1,5 @@
 import Expense from "../models/expense.js";
+import User from "../models/user.js";
 
 const VALID_TYPES = ["income", "expense", "transfer"];
 const VALID_MODES = ["demo", "actual"];
@@ -179,6 +180,19 @@ export const createTransaction = async (req, res) => {
       },
     });
 
+    // Update User Balance if in actual mode
+    if (entryMode === "actual") {
+      const balanceField =
+        normalized.data.paymentMode === "cash"
+          ? "cashBalance"
+          : normalized.data.paymentMode === "savings"
+            ? "savingsBalance"
+            : "netBalance";
+
+      const adjustment = normalized.data.type === "income" ? normalized.data.amount : -normalized.data.amount;
+      await User.findByIdAndUpdate(req.user.id, { $inc: { [balanceField]: adjustment } });
+    }
+
     res.status(201).json(transaction);
   } catch (error) {
     res.status(500).json({ message: "Failed to create transaction" });
@@ -230,9 +244,21 @@ export const deleteTransaction = async (req, res) => {
   try {
     const { transactionId } = req.params;
     const deleted = await Expense.findOneAndDelete({ _id: transactionId, userId: req.user.id });
-
     if (!deleted) {
       return res.status(404).json({ message: "Transaction not found" });
+    }
+
+    // Revert balance adjustment if actual
+    if (deleted.entryMode === "actual") {
+      const balanceField =
+        deleted.paymentMode === "cash" 
+          ? "cashBalance" 
+          : deleted.paymentMode === "savings" 
+            ? "savingsBalance" 
+            : "netBalance";
+
+      const adjustment = deleted.type === "income" ? -deleted.amount : deleted.amount;
+      await User.findByIdAndUpdate(req.user.id, { $inc: { [balanceField]: adjustment } });
     }
 
     res.status(200).json({ message: "Transaction deleted" });

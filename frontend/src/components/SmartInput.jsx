@@ -22,6 +22,7 @@ const SmartInput = ({ onTransactionAdded, entryMode }) => {
   const [category, setCategory] = useState(categoryMap.expense[0]);
   const [transactionDate, setTransactionDate] = useState(getToday());
   const [note, setNote] = useState("");
+  const [paymentMode, setPaymentMode] = useState("upi");
   const [useAi, setUseAi] = useState(true);
   const [isEssential, setIsEssential] = useState(true);
 
@@ -93,6 +94,7 @@ const SmartInput = ({ onTransactionAdded, entryMode }) => {
           amount: parsedAmount,
           transactionDate,
           type,
+          paymentMode,
           entryMode: entryMode || "actual",
         });
       } else {
@@ -103,6 +105,7 @@ const SmartInput = ({ onTransactionAdded, entryMode }) => {
           type,
           category,
           note,
+          paymentMode,
           isEssential: type === "expense" ? isEssential : true,
           entryMode: entryMode || "actual",
         });
@@ -210,6 +213,17 @@ const SmartInput = ({ onTransactionAdded, entryMode }) => {
                 {option}
               </option>
             ))}
+          </select>
+
+          <select
+            value={paymentMode}
+            onChange={(e) => setPaymentMode(e.target.value)}
+            className="bg-slate-950 border border-slate-700 rounded-xl py-2.5 px-3 text-sm"
+            disabled={loading}
+          >
+            <option value="upi">UPI / Bank</option>
+            <option value="cash">Cash</option>
+            <option value="savings">Savings Account</option>
           </select>
 
           <label className="flex items-center gap-2 bg-slate-950 border border-slate-700 rounded-xl py-2.5 px-3 text-sm">

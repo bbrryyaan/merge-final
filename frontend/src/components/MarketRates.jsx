@@ -12,11 +12,11 @@ const MarketRates = () => {
       // Using mock data for demo purposes since we don't have an API key
       setTimeout(() => {
         setRates([
-          { symbol: 'USD/INR', value: 83.12, change: '+0.15%', isCrypto: false },
-          { symbol: 'EUR/INR', value: 89.45, change: '-0.20%', isCrypto: false },
-          { symbol: 'BTC/USD', value: '$65,432.10', change: '+2.4%', isCrypto: true },
-          { symbol: 'ETH/USD', value: '$3,456.78', change: '+1.8%', isCrypto: true },
-          { symbol: 'BNB/USD', value: '$567.89', change: '-0.5%', isCrypto: true },
+          { symbol: 'USD/INR', value: 92.36, change: '+0.19%', isCrypto: false },
+          { symbol: 'EUR/INR', value: 106.42, change: '+0.12%', isCrypto: false },
+          { symbol: 'BTC/USD', value: '$69,938', change: '+1.4%', isCrypto: true },
+          { symbol: 'ETH/USD', value: '$2,071', change: '+0.8%', isCrypto: true },
+          { symbol: 'GBP/INR', value: 118.45, change: '-0.05%', isCrypto: false },
         ]);
         setLoading(false);
       }, 800);
