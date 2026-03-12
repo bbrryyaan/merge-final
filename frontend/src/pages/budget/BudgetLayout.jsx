@@ -24,6 +24,7 @@ import {
   Users,
   HandCoins,
   ShieldAlert,
+  MapPinned,
 } from "lucide-react";
 import api from "../../lib/api";
 import { formatMonthKey, monthTitle } from "../../lib/budget";
@@ -41,6 +42,7 @@ const navItems = [
   { to: "/dashboard/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/dashboard/transactions", label: "Transactions", icon: ReceiptText },
   { to: "/dashboard/system-logic", label: "System Logic", icon: ShieldAlert },
+  { to: "/dashboard/map", label: "Campus Map", icon: MapPinned },
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

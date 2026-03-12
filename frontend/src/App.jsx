@@ -14,6 +14,7 @@ import SettingsPage from "./pages/budget/SettingsPage";
 import { useAuth } from "./context/useAuth";
 import CampusSplitterPage from "./pages/CampusSplitter/CampusSplitterPage";
 import SystemDocsPage from "./pages/SystemDocs/SystemDocsPage";
+import MapFeaturePage from "./pages/MapFeature/MapFeaturePage";
 import NetBalancePrompt from "./components/NetBalancePrompt";
 
 const FullScreenLoader = () => (
@@ -84,6 +85,7 @@ function App() {
           <Route path="calendar" element={<BudgetCalendarPage />} />
           <Route path="transactions" element={<BudgetTransactionsPage />} />
           <Route path="system-logic" element={<SystemDocsPage />} />
+          <Route path="map" element={<MapFeaturePage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard/overview" replace />} />
